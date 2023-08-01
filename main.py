@@ -98,6 +98,7 @@ if __name__ == '__main__':
     NUM_EPOCHS = 10
     BUFFER_SIZE = 60000
     BATCH_SIZE = 2
+    SELECTED_TRAIN_IMGS_SIZE = 10000
 
     wandb.login(key=os.environ["WANDB_API_KEY"])
 
@@ -120,7 +121,7 @@ if __name__ == '__main__':
     np.random.seed(42)
 
     # Generate random indices
-    random_indices = np.random.choice(len(train_imgs), size=1000, replace=False)
+    random_indices = np.random.choice(len(train_imgs), size=SELECTED_TRAIN_IMGS_SIZE, replace=False)
 
     # Select random images and labels
     random_train_imgs = train_imgs[random_indices]
