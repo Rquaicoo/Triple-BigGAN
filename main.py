@@ -12,6 +12,9 @@ from generator import generator_network
 from discriminator import discriminator_network
 from classifier import classifier
 import wandb
+import os
+
+
 
 
 generator_optimizer = Adam(learning_rate=0.00005, beta_1=0, beta_2=0.999)
@@ -39,6 +42,7 @@ def calculate_discriminator_loss(real_output, fake_output):
 num_classes = 10
 z_dim = 128
 
+
 @tf.function
 def train_step(images, labels):
     batch_size = images.shape[0]
@@ -48,8 +52,6 @@ def train_step(images, labels):
     random_labels = tf.random.uniform([batch_size], minval=0, maxval=num_classes, dtype=tf.int32)
     class_embeddings = tf.one_hot(random_labels, depth=num_classes)
     print(class_embeddings, random_labels)
-
-  
 
     with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape, tf.GradientTape() as class_tape:
         # Train the generator
@@ -77,28 +79,40 @@ def train_step(images, labels):
     # Calculate gradients
     gen_gradients = gen_tape.gradient(gen_loss, generator.trainable_variables)
     disc_gradients = disc_tape.gradient(disc_loss, discriminator.trainable_variables)
-    class_gradients = class_tape.gradient(class_loss, classifier_network.trainable_variables)
+    class_gradients = class_tape.gradient(class_loss, classifier.trainable_variables)
 
     print("applying gradients")
     # Apply gradients
     generator_optimizer.apply_gradients(zip(gen_gradients, generator.trainable_variables))
     discriminator_optimizer.apply_gradients(zip(disc_gradients, discriminator.trainable_variables))
-    classifier_optimizer.apply_gradients(zip(class_gradients, classifier_network.trainable_variables))
+    classifier_optimizer.apply_gradients(zip(class_gradients, classifier.trainable_variables))
+    
+    return gen_loss, disc_loss, class_loss
 
 
 
 if __name__ == '__main__':
+    
+    #config
+
+    NUM_EPOCHS = 10
+    BUFFER_SIZE = 60000
+    BATCH_SIZE = 2
+
+    wandb.login(key=os.environ["WANDB_API_KEY"])
+
     wandb.init(
       # Set the project where this run will be logged
       project="Triple-BiGGAN", 
       # We pass a run name (otherwise it’ll be randomly assigned, like sunshine-lollypop-10)
-      name=f"experiment_1",
+      name=f"Server-Run",
       # Track hyperparameters and run metadata
       config={
       "architecture": "Triple-BiGGAN",
       "dataset": "CIFAR-100",
-      "epochs": 10,
+      "epochs": NUM_EPOCHS,
       })
+    
     # Load the dataset
     (train_imgs, train_labels), (test_imgs, test_labels) = cifar10.load_data()
     wandb.log({"train_imgs": train_imgs, "train_labels": train_labels, "test_imgs": test_imgs, "test_labels": test_labels})
@@ -127,7 +141,7 @@ if __name__ == '__main__':
     BATCH_SIZE = 256
 
     # Create a TensorFlow Dataset
-    train_dataset = tf.data.Dataset.from_tensor_slices((resized_images, train_labels)).shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
+    train_dataset = tf.data.Dataset.from_tensor_slices((resized_images, train_labels)).batch(BATCH_SIZE)
     test_dataset = tf.data.Dataset.from_tensor_slices((test_imgs, test_labels))
     
     generator = generator_network()
@@ -139,24 +153,40 @@ if __name__ == '__main__':
     discriminator.compile(optimizer=discriminator_optimizer,)
     
     # Training loop
-    num_epochs = 10
-    for epoch in range(num_epochs):
+    for epoch in range(NUM_EPOCHS):
+        gen_train_loss = []
+        disc_train_loss = []
+        class_train_loss = []
+        
+        
         start = time.time()
         for real_images, real_labels in train_dataset:
-            wandb.log({"real_images": real_images, "real_labels": real_labels})
-            train_step(real_images, real_labels)
+            generator_loss, discriminator_loss, classifier_loss = train_step(real_images, real_labels)
+            
+            #print(np.mean(generator_loss), np.mean(discriminator_loss), classifier_loss)
+            
+            gen_train_loss.append(float(generator_loss))
+            disc_train_loss.append(float(discriminator_loss))
+            
+            for loss in classifier_loss:
+                class_train_loss.append(float(loss))
 
-
-            print(f"Epoch {epoch+1}/{num_epochs}")
-            print()
-
-        wandb.log({"epoch": epoch})
+            #print(f"Epoch {epoch+1}/{num_epochs}")
+            #print()
+        
         print ('Time for epoch {} is {} sec'.format(epoch + 1, time.time()-start))
+        
+        wandb.log({'epoch': epoch,
+              'gen_loss': np.mean(gen_train_loss),
+              'disc_loss': np.mean(disc_train_loss),
+                'class_loss': np.mean(class_train_loss)
+                })
+      
 
     # Save the trained models
-    generator.save('generator_model.h5')
-    discriminator.save('discriminator_model.h5')
-    classifier.save('classifier_model.h5')
+    generator.save_weights('generator_model.h5')
+    discriminator.save_weights('discriminator_model.h5')
+    classifier.save_weights('classifier_model.h5')
 
     wandb.finish()
 
