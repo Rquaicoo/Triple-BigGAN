@@ -79,13 +79,13 @@ def train_step(images, labels):
     # Calculate gradients
     gen_gradients = gen_tape.gradient(gen_loss, generator.trainable_variables)
     disc_gradients = disc_tape.gradient(disc_loss, discriminator.trainable_variables)
-    class_gradients = class_tape.gradient(class_loss, classifier.trainable_variables)
+    class_gradients = class_tape.gradient(class_loss, classifier_network.trainable_variables)
 
     print("applying gradients")
     # Apply gradients
     generator_optimizer.apply_gradients(zip(gen_gradients, generator.trainable_variables))
     discriminator_optimizer.apply_gradients(zip(disc_gradients, discriminator.trainable_variables))
-    classifier_optimizer.apply_gradients(zip(class_gradients, classifier.trainable_variables))
+    classifier_optimizer.apply_gradients(zip(class_gradients, classifier_network.trainable_variables))
     
     return gen_loss, disc_loss, class_loss
 
@@ -187,7 +187,7 @@ if __name__ == '__main__':
     # Save the trained models
     generator.save_weights('generator_model.h5')
     discriminator.save_weights('discriminator_model.h5')
-    classifier.save_weights('classifier_model.h5')
+    classifier_network.save_weights('classifier_model.h5')
 
     wandb.finish()
 

@@ -10,33 +10,6 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 
-def orthogonal_regularizer(scale) :
-  """ Defining the Orthogonal regularizer and return the function at last to be used in Conv layer as kernel regularizer"""
-
-  def ortho_reg(w) :
-      """ Reshaping the matrxi in to 2D tensor for enforcing orthogonality"""
-      _, _, _, c = w.get_shape().as_list()
-
-      w = tf.reshape(w, [-1, c])
-
-      """ Declaring a Identity Tensor of appropriate size"""
-      identity = tf.eye(c)
-
-      """ Regularizer Wt*W - I """
-      w_transpose = tf.transpose(w)
-      w_mul = tf.matmul(w_transpose, w)
-      reg = tf.subtract(w_mul, identity)
-
-      """Calculating the Loss Obtained"""
-      ortho_loss = tf.nn.l2_loss(reg)
-
-      return scale * ortho_loss
-
-  return ortho_reg
-
-
-
-from keras.layers.pooling.max_pooling2d import MaxPooling2D
 weight_init = tf.initializers.truncated_normal(mean=0.0, stddev=0.02)
 weight_regularizer = orthogonal_regularizer(0.0001)
 
@@ -96,12 +69,22 @@ def conv(name, inputs, nums_out, k_size, strides, update_collection=None, is_sn=
 
 def inner_product(global_pooled, y, nums_class, update_collection=None):
     W = global_pooled.shape[-1]
-    V = tf.compat.v1.get_variable("V", [nums_class, W], initializer=tf.orthogonal_initializer())
+    V = tf.compat.v1.get_variable("V", [nums_class, W], initializer=tf.compat.v1.orthogonal_initializer())
     V = tf.transpose(V)
     V = spectral_normalization("embed", V, update_collection=update_collection)
     V = tf.transpose(V)
     temp = tf.nn.embedding_lookup(V, y)
-    temp = tf.reduce_sum(temp * global_pooled, axis=1, keep_dims=True)
+    temp = tf.reduce_sum(temp * global_pooled, axis=1, keepdims=True)
+    return temp
+
+def dense(name, inputs, nums_out, update_collection=None, is_sn=False):
+    nums_in = inputs.shape[-1]
+    with tf.name_scope(name):
+        W = tf.compat.v1.get_variable("W", [nums_in, nums_out], initializer=tf.compat.v1.orthogonal_initializer())
+        b = tf.compat.v1.get_variable("b", [nums_out], initializer=tf.constant_initializer([0.0]))
+        if is_sn:
+            W = spectral_normalization("sn", W, update_collection=update_collection)
+    return tf.nn.bias_add(tf.matmul(inputs, W), b)
     return temp
 
 def non_local(name, inputs, update_collection, is_sn):
