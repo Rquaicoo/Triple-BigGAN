@@ -1,0 +1,25 @@
+Implementation Details Not Found in the Original Paper
+
+1. Pixel Normalization:
+   In our implementation, we incorporated Pixel Normalization as a preprocessing step for the images in the Generative Adversarial Network (GAN). Pixel Normalization is a technique used to normalize the pixel values of images to have zero mean and unit variance, which helps in stabilizing the training process of the GAN. This technique was not mentioned in the original paper.
+
+2. One-Hot Encoding:
+   Unlike the original paper, where categorical labels may have been used directly, in our implementation, we employed One-Hot Encoding for the labels. This method converts class labels into a binary matrix, where each class is represented as a unique binary vector. One-Hot Encoding is commonly used when training neural networks for classification tasks.
+
+3. Training on a Sampled Subset of Images:
+   Instead of using the entire CIFAR-10 dataset, which contains 60,000 images, we trained our model on two different subsets: one with 1,000 images and another with 10,000 images. This was done to expedite experimentation and reduce training time while still achieving reasonable results. This deviation from the original paper's dataset size was a practical choice for our specific implementation.
+
+4. Loss Functions:
+   In our implementation, we used different loss functions compared to the original paper. Specifically:
+   - For the classifier in the GAN (discriminator), we utilized Categorical Cross-Entropy as the loss function. This loss function is commonly used for multi-class classification tasks and helps the discriminator distinguish between different classes.
+   - For the generator and discriminator networks, we employed Binary Cross-Entropy as the loss function. This loss function is typical in GANs for binary classification, where the discriminator aims to distinguish between real and generated samples.
+
+5. Libraries Used:
+   We utilized the following libraries in our implementation:
+   - TensorFlow: A popular deep learning framework for building and training neural networks.
+   - tensorflow-gan: An extension library for TensorFlow specifically designed for training GANs and related models.
+   - Matplotlib: A Python plotting library used for visualizing data and generating graphs and charts.
+   - NumPy: A fundamental package for scientific computing in Python, which provides support for working with arrays and matrices.
+   - Wandb (Weights and Biases): A tool for visualizing and tracking machine learning experiments, which can help in monitoring the training process and results.
+
+These implementation details were chosen to adapt the original GAN framework to our specific dataset and problem requirements. While they may differ from the details presented in the original paper, they were essential for the success and performance of our GAN-based model.
